@@ -2,7 +2,7 @@
 .vscode/
 
 # Python cache
-OCR-Correction/__pycache__/
+/__pycache__/
 
 # Redundant files
-OCR-Correction/data/pred.txt
+/data/pred.txt
