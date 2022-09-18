@@ -1,4 +1,12 @@
 from sre_parse import State
+from tracemalloc import start
+
+
+
+
+from collections import OrderedDict
+import numpy as np
+
 
 
 class SentenceCorrector(object):
@@ -40,7 +48,7 @@ class SentenceCorrector(object):
 
 
 
-        ## Hill Climbing
+        # # Iterative Hill Climbing (without recursion)
 
         # index_list = list(range(0,len(self.best_state)))        # List of indices of characters which have not been changed till now
 
@@ -63,7 +71,7 @@ class SentenceCorrector(object):
         #             cost_new = self.cost_fn(new_state)
 
         #             #Updating the min state and cost
-        #             if(cost_new <= cost_min):
+        #             if(cost_new < cost_min):
         #                 cost_min = cost_new
         #                 min_state = new_state
             
@@ -76,6 +84,73 @@ class SentenceCorrector(object):
         #         index_list.remove(i)
         #         self.best_state = min_state   
           
+
+
+
+
+
+
+        # # Recursive Hill Climbing
+        # # In case we have a state which has the same cost as the min cost, we move to a random state 
+
+        # index_list = list(range(0,len(self.best_state)))        # List of indices of characters which have not been changed till now
+
+
+
+        # def hill_climbing_helper(curr_state,index_list):
+        #     if len(index_list)==0:
+        #         return curr_state
+
+        #     for i in index_list:
+        #     #for i in range(len(self.best_state)):
+        #         ch_conf = curr_state[i]
+        #         if(ch_conf == ' '): 
+        #             continue
+                
+        #         for ch_actual in self.state_map[ch_conf]:
+                    
+        #             # Modify the string to replace the confused character with the possible actual character
+        #             temp = list(curr_state)
+        #             temp[i] = ch_actual
+        #             nonlocal new_state
+        #             nonlocal min_state
+        #             nonlocal cost_new
+        #             nonlocal cost_min
+
+        #             new_state = "".join(temp)
+
+        #             # Calculate the cost of the new string
+        #             cost_new = self.cost_fn(new_state)
+
+        #             #Updating the min state and cost
+        #             if(cost_new <= cost_min):
+        #                 cost_min = cost_new
+        #                 min_state = new_state
+            
+        #     # If there is no child state with a better cost, then we have reached a local minima so break out of the loop and return the best state            
+        #     if(curr_state == min_state) : 
+        #         return curr_state
+        #         # index_list.remove(i)
+        #         # temp_state = hill_climbing_helper(new_state,index_list)
+        #         # if(self.cost_fn(curr_state)< self.cost_fn(temp_state)):
+        #         #     return curr_state
+        #         # else:
+        #         #     return temp_state
+        #     else : 
+        #         # Updating the best state
+        #         index_list.remove(i)
+        #         self.best_state = min_state
+        #         return hill_climbing_helper(min_state,index_list)
+          
+
+
+        # self.best_state = hill_climbing_helper(start_state,index_list)
+
+
+
+
+
+
 
 
 
@@ -120,6 +195,7 @@ class SentenceCorrector(object):
         #     # If there is no child state with a better cost, then we have reached a local minima so break out of the loop and return the best state            
         #     if(curr_state == min_state) : 
         #         index_list.remove(i)
+                
         #         temp_state = hill_climbing_helper(new_state,index_list)
         #         if(self.cost_fn(curr_state)< self.cost_fn(temp_state)):
         #             return curr_state
@@ -128,14 +204,18 @@ class SentenceCorrector(object):
         #     else : 
         #         # Updating the best state
         #         index_list.remove(i)
+        #         if (self.cost_fn(self.best_state) > cost_min) :
+        #             self.best_state = min_state
         #         return hill_climbing_helper(min_state,index_list)
           
+
+
         # self.best_state = hill_climbing_helper(start_state,index_list)
 
 
 
 
-        # # Stochastic Hill Climbing
+        # # Iterative  Stochastic Hill Climbing
         # Instead of choosing the best state, choose the first state with cost less than current cost
 
 
@@ -165,57 +245,79 @@ class SentenceCorrector(object):
 
 
 
+
+
         # Local Beam Search
-        # Instead of selecting one min state as in hill climbing, select k min states and then choose the best state from them
+        # Instead of choosing one best state, choose k min states and recurse on them
 
-        index_list = list(range(0,len(self.best_state)))        # List of indices of characters which have not been changed till now
-
-
-
-        def local_beam_helper(curr_state,index_list):
-            if len(index_list)==0:
-                return curr_state
-
-            for i in index_list:
-            #for i in range(len(self.best_state)):
-                ch_conf = curr_state[i]
-                if(ch_conf == ' '): 
-                    continue
-                
-                for ch_actual in self.state_map[ch_conf]:
+        def local_beam_helper(curr_state_list, k):
+            new_state_list = []
+            state_cost_dict = {}
+            new_state = ""
+            nonlocal start_state
+            for curr_state in curr_state_list:
+                #nonlocal start_state
+                nonlocal min_state
+                nonlocal cost_min
+                for i in range(len(curr_state)):
+                    ch_conf = curr_state[i]
+                    if ch_conf != start_state[i]:
+                        continue
+                    if(ch_conf == ' '): 
+                        continue
                     
-                    # Modify the string to replace the confused character with the possible actual character
-                    temp = list(curr_state)
-                    temp[i] = ch_actual
-                    nonlocal new_state
-                    nonlocal min_state
-                    nonlocal cost_new
-                    nonlocal cost_min
+                    for ch_actual in self.state_map[ch_conf]:
+                        
+                        # Modify the string to replace the confused character with the possible actual character
+                        temp = list(curr_state)
+                        temp[i] = ch_actual 
+                        new_state = "".join(temp)
 
-                    new_state = "".join(temp)
+                        # Calculate the cost of the new string
+                        cost_new = self.cost_fn(new_state)
 
-                    # Calculate the cost of the new string
-                    cost_new = self.cost_fn(new_state)
+                        state_cost_dict[new_state] = cost_new
 
-                    #Updating the min state and cost
-                    if(cost_new <= cost_min):
-                        cost_min = cost_new
-                        min_state = new_state
-            
-            # If there is no child state with a better cost, then we have reached a local minima so break out of the loop and return the best state            
-            if(curr_state == min_state) : 
-                index_list.remove(i)
-                temp_state = local_beam_helper(new_state,index_list)
-                if(self.cost_fn(curr_state)< self.cost_fn(temp_state)):
-                    return curr_state
-                else:
-                    return temp_state
-            else : 
-                # Updating the best state
-                index_list.remove(i)
-                return local_beam_helper(min_state,index_list)
+                        # #Updating the min state and cost
+                        # if(cost_new <= cost_min):
+                        #     cost_min = cost_new
+                        #     min_state = new_state
+                
+                # # If there is no child state with a better cost, then we have reached a local minima so break out of the loop and return the best state            
+                # if(curr_state == min_state) : 
+                #     return curr_state
+                #     # index_list.remove(i)
+                #     # temp_state = hill_climbing_helper(new_state,index_list)
+                #     # if(self.cost_fn(curr_state)< self.cost_fn(temp_state)):
+                #     #     return curr_state
+                #     # else:
+                #     #     return temp_state
+                # else : 
+                #     # Updating the best state
+                #     index_list.remove(i)
+                #     self.best_state = min_state
+                #     return local_beam_helper(min_state,index_list)
           
-        self.best_state = local_beam_helper(start_state,index_list)
+
+            # Sort the dictionary by cost
+            state_cost_dict = dict(sorted(state_cost_dict.items(), key=lambda x: x[1], reverse = True))
+            
+
+            for state in state_cost_dict:
+                if(len(new_state_list) == k):
+                    break
+                new_state_list.append(state)
+
+
+            if(len(new_state_list)==0):
+                return 0
+            
+            self.best_state=new_state_list[0]
+            
+            return local_beam_helper(new_state_list, k)
+
+
+        temp = local_beam_helper(list(start_state),5)
 
 
 
@@ -238,5 +340,6 @@ class SentenceCorrector(object):
         print('final state = \t', self.best_state)
 
         # raise Exception("Not Implemented.")
+
 
 
