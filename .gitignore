@@ -1,0 +1,8 @@
+# IDE files
+.vscode/
+
+# Python cache
+/__pycache__/
+
+# Redundant files
+/data/pred.txt
